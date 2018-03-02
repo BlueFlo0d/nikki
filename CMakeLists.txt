@@ -1,0 +1,15 @@
+cmake_minimum_required (VERSION 2.8)
+set(CMAKE_BUILD_TYPE Debug CACHE STRING "Debug build.")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
+
+aux_source_directory(. WKDIR_SRCS)
+
+find_library(CHECK_GCRYPT gcrypt)
+if(CHECK_GCRYPT)
+ message(status " libgcrypt found.")
+else(CHECK_GCRYPT)
+ message(FATAL_ERROR " libgcrypt not found")
+endif(CHECK_GCRYPT)
+add_executable(qtdiary ${WKDIR_SRCS})
+target_link_libraries(qtdiary gcrypt)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g --std=c99")
