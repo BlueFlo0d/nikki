@@ -65,12 +65,13 @@ void node_nikki_print(qtdiary_node *pfr,size_t i){
         else {
                 while(buf<pfr->content+pfr->content_len){
                         print_time((time_t *)buf,"[%s] ");
+                        //Magic char
                         buf+=sizeof(time_t);
                         size_t clen = *(size_t *)buf;
-                        buf+=sizeof(clen);
-                        fwrite(buf, clen, 1, stdout);
+                        buf+=sizeof(size_t)+sizeof(char);
+                        fwrite(buf, clen-sizeof(char), 1, stdout);
                         fputc('\n',stdout);
-                        buf+=clen;
+                        buf+=clen-sizeof(char);
                 }
         }
 }
@@ -87,9 +88,68 @@ void qtdiary_nikki_print(qtdiary_local_chain *plc){
                         fread(&clen, sizeof(size_t), 1, plc->active);
                         char *buf=(char *)malloc(clen);
                         fread(buf, clen, 1, plc->active);
-                        fwrite(buf, clen, 1, stdout);
+                        fwrite(buf+sizeof(char), clen-sizeof(char), 1, stdout);
                         free(buf);
                         fputc('\n', stdout);
                 }
         }
+}
+struct opg {
+        record_operator op;
+        nikki_operator sop;
+};
+void node_nikki_do(qtdiary_node *pfr,size_t i,void *arg){
+        record_operator op = ((struct opg *)arg)->op;
+        nikki_operator sop = ((struct opg *)arg)->sop;
+        char *buf = pfr->content;
+        time_t cur_time;
+        if(pfr->flag&QTDIARY_FRF_ROOT){
+                buf+=sizeof(uint16_t);
+                cur_time = *(time_t *)buf;
+                buf+=sizeof(time_t);
+                size_t clen = *(size_t *)buf;
+                buf+=sizeof(size_t);
+                char *title = buf;
+                buf+=clen;
+                size_t slen = *(size_t *)buf;
+                buf+=sizeof(size_t);
+                sop(title,clen,buf,slen,cur_time);
+        }
+        else {
+                while(buf<pfr->content+pfr->content_len){
+                        cur_time = *(time_t *)buf;
+                        buf+=sizeof(time_t);
+                        size_t clen = *(size_t *)buf;
+                        buf+=sizeof(size_t);
+                        op(buf,clen,cur_time);
+                        buf+=clen;
+                }
+        }
+
+}
+void qtdiary_nikki_do(qtdiary_local_chain *plc,record_operator op,nikki_operator sop){
+        struct opg arg;
+        arg.op = op;
+        arg.sop = sop;
+        if(!qtdiary_local_chain_node_do_with_args(plc, node_nikki_do,&arg)){
+                fseek(plc->active, 0, SEEK_END);
+                size_t ftail = ftell(plc->active);
+                fseek(plc->active, 0, SEEK_SET);
+                while(ftell(plc->active)<ftail){
+                        time_t t;
+                        fread(&t, sizeof(time_t), 1, plc->active);
+                        size_t clen;
+                        fread(&clen, sizeof(size_t), 1, plc->active);
+                        char *buf=(char *)malloc(clen);
+                        fread(buf, clen, 1, plc->active);
+                        op(buf,clen,t);
+                        free(buf);
+                }
+        }
+}
+void qtdiary_nikki_do_for_path(const char *path,record_operator op,nikki_operator sop){
+        qtdiary_local_chain lc;
+        qtdiary_local_chain_open(&lc, path);
+        qtdiary_nikki_do(&lc, op, sop);
+        qtdiary_local_chain_close(&lc);
 }

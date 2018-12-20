@@ -165,6 +165,10 @@ off_t qtdiary_node_read(qtdiary_node *pfr,FILE* fp){
         }
         return ftell(fp);
 }
+void qtdiary_node_logop(qtdiary_node *pfr,size_t i,void *arg){
+        FILE *fp = (FILE *)arg;
+        qtdiary_node_log(pfr,fp);
+}
 void qtdiary_node_log(qtdiary_node *pfr,FILE* fp){
         mpz_t x,y;
         mpz_init(x);

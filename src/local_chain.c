@@ -27,17 +27,7 @@ void qtdiary_local_chain_rebuild_index(qtdiary_local_chain *plc){
         fseek(plc->index, 0, SEEK_SET);
         fwrite(&(plc->height), sizeof(size_t), 1, plc->index);
 }
-
-void qtdiary_local_chain_open(qtdiary_local_chain *plc,const char *path){
-        int dir = open(path, O_DIRECTORY);
-        if(dir==-1){
-                mkdir(path, S_IRUSR|S_IWUSR|S_IEXEC);
-                dir = open(path, O_DIRECTORY);
-        }
-        int inb = openat(dir, "nodebase", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
-        int ifd = openat(dir, "index", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
-        int ihd = openat(dir, "head", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
-        int iac = openat(dir, "active", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+static inline void initialize_lc(qtdiary_local_chain *plc,int ifd,int inb,int ihd,int iac){
         plc->index = fdopen(ifd, "wb+");
         plc->nodebase = fdopen(inb, "wb+");
         plc->head = fdopen(ihd, "wb+");
@@ -64,6 +54,25 @@ void qtdiary_local_chain_open(qtdiary_local_chain *plc,const char *path){
         else{
                 plc->chain_tail = 0;
         }
+}
+void qtdiary_local_chain_open(qtdiary_local_chain *plc,const char *path){
+        int dir = open(path, O_DIRECTORY);
+        if(dir==-1){
+                mkdir(path, S_IRUSR|S_IWUSR|S_IEXEC);
+                dir = open(path, O_DIRECTORY);
+        }
+        int inb = openat(dir, "nodebase", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int ifd = openat(dir, "index", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int ihd = openat(dir, "head", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int iac = openat(dir, "active", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        initialize_lc(plc,ifd,inb,ihd,iac);
+}
+void qtdiary_local_chain_lopen(qtdiary_local_chain *plc,int dir){
+        int inb = openat(dir, "nodebase", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int ifd = openat(dir, "index", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int ihd = openat(dir, "head", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        int iac = openat(dir, "active", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR);
+        initialize_lc(plc,ifd,inb,ihd,iac);
 }
 int qtdiary_local_chain_push(qtdiary_local_chain *plc, void *buf,size_t len){
         int ret = 0;
@@ -186,6 +195,10 @@ int qtdiary_local_chain_print(qtdiary_local_chain *plc){
 #define DO_FUNC(cur,i) op(cur,i)
 int qtdiary_local_chain_node_do(qtdiary_local_chain *plc,node_operator op){
         VERIFY_DO(DO_FUNC);
+}
+#define DO_AFUNC(cur,i) op(cur,i,arg)
+int qtdiary_local_chain_node_do_with_args(qtdiary_local_chain *plc,node_operator_with_args op,void *arg){
+        VERIFY_DO(DO_AFUNC);
 }
 uint8_t *qtdiary_local_chain_get_content(qtdiary_local_chain *plc,size_t height,uint8_t *buf,size_t *len){
         fseek(plc->index, sizeof(size_t)+height*sizeof(off_t), SEEK_SET);

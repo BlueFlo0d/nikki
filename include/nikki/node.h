@@ -73,6 +73,7 @@ extern "C"{
         off_t qtdiary_node_write(qtdiary_node *pfr,FILE* fp);
         off_t qtdiary_node_read(qtdiary_node *pfr,FILE* fp);
         void qtdiary_node_log(qtdiary_node *pfr,FILE* fp);
+        void qtdiary_node_logop(qtdiary_node *pfr,size_t i,void *arg);
         int qtdiary_node_verify(qtdiary_node *pfr,qtdiary_node *pre);
         #ifdef __cplusplus
 }
